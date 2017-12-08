@@ -30,34 +30,66 @@ import edu.stanford.nlp.util.CoreMap;
 public class Main {
 
 	public static final StanfordCoreNLP pipeline = CoreNLPUtils.StanfordDepNNParser();
-	String text = "Donald Trump is an idiot and now president of the United States. His home is in Atlanta. Barack Obama was the president before, but now that Obama retired, Trump took over.";
+	// String text = "Michael Joseph Jackson [Michael Jackson][1][2] (August 29,
+	// 1958 – June 25, 2009) was an American [United States] singer, songwriter, and
+	// dancer. Dubbed the \"King of Pop\",[3][4] he was one of the most popular
+	// entertainers in the world, and was the best-selling music artist at the time
+	// of his death.[5][6] Jackson [Michael Jackson]'s contributions to music,
+	// dance, and fashion[7][8][9] along with his publicized personal life made him
+	// a global figure in popular culture for over four decades.";
 	private static final Logger logger = LogManager.getLogger("Logger");
 
-	public static void main(String[] args) {
-		Main c = new Main();
+	public ArrayList<WDPSToken> resolve(String text) {
 		ArrayList<WDPSToken> output = new ArrayList<WDPSToken>();
-		ArrayList<WDPSToken> tokens = c.annotateText();
+		ArrayList<WDPSToken> output2 = new ArrayList<WDPSToken>();
+		ArrayList<WDPSToken> tokens = annotateText(text);
+		HashSet<Integer> availableChainIDs = new HashSet<Integer>();
 		ArrayList<WDPSDisambiguatedEntity> disAmEnti = null;
 		try {
-			disAmEnti = c.diambiguateEntity(c.text);
+			disAmEnti = diambiguateEntity(text);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		for(WDPSToken token: tokens) {
+		for (WDPSToken token : tokens) {
 			int tokenBeginPos = token.beginPosition;
-			for(WDPSDisambiguatedEntity ent: disAmEnti) {
-				if(token.endPosition<=(ent.getOffset()+ent.getLength()) && token.beginPosition >= ent.getOffset())
+			for (WDPSDisambiguatedEntity ent : disAmEnti) {
+				if (token.endPosition <= (ent.getOffset() + ent.getLength()) && token.beginPosition >= ent.getOffset())
 					token.setKbIdentifier(ent.getKbIdentifier());
 			}
 			output.add(token);
 		}
-		System.out.println(output);
+
+		for (WDPSToken tok : output) {
+			availableChainIDs.add(tok.getCorefID());
+		}
+		HashMap<Integer, String> out = new HashMap<Integer, String>();
+		for (Integer chainID : availableChainIDs) {
+			if (chainID == -1)
+				continue;
+			String KbIdentifier = "";
+			for (WDPSToken t : output) {
+				if (chainID == t.getCorefID() && t.getKbIdentifier() != "") {
+					KbIdentifier = (t.getKbIdentifier());
+				}
+			}
+			out.put(chainID, KbIdentifier);
+		}
+		for(WDPSToken tok : output) {
+			String kb = out.get(tok.getCorefID());
+			if(kb==null)
+				kb="";
+			tok.setKbIdentifier(kb);
+			output2.add(tok);
+		}
+		
+		return output2;
+
 	}
 
-	public ArrayList<WDPSToken> annotateText() {
+	public ArrayList<WDPSToken> annotateText(String text) {
 		Annotation document = null;
 		try {
-			document = new Annotation(this.text);
+			document = new Annotation(text);
 			pipeline.annotate(document);
 		} catch (Exception e) {
 		}
@@ -109,21 +141,20 @@ public class Main {
 		ArrayList<WDPSToken> outPutList = new ArrayList<WDPSToken>();
 		int takeNextToken = 0;
 		int lastCorefID = -1;
-		for(WDPSToken tok: tokenList) {
+		for (WDPSToken tok : tokenList) {
 			int sentNum = tok.getSentenceNumber();
 			HashMap<Integer, WDPSCorefMention> tmpMap = corefMap.get(sentNum);
-			
+
 			WDPSCorefMention tmpMentino = tmpMap.get(tok.getIndex());
-			if(tmpMentino!=null) {
+			if (tmpMentino != null) {
 				takeNextToken = tmpMentino.getEndIndex() - tmpMentino.getStartIndex();
 				lastCorefID = tmpMentino.getCorefChain();
 			}
-			
-			
-			if(takeNextToken > 0) {
+
+			if (takeNextToken > 0) {
 				tok.setCorefID(lastCorefID);
 				takeNextToken--;
-				
+
 			}
 			outPutList.add(tok);
 		}
@@ -155,13 +186,18 @@ public class Main {
 		iny.close();
 		JSONObject wholeResponse = new JSONObject(response.toString());
 		JSONArray allMentions = wholeResponse.getJSONArray("mentions");
+		JSONObject entityMetadata = wholeResponse.getJSONObject("entityMetadata");
 		for (int i = 0; i < allMentions.length(); i++) {
 			JSONObject entry = (JSONObject) allMentions.get(i);
 			int offset = (int) entry.get("offset");
 			int length = (int) entry.get("length");
 			String name = entry.getString("name");
-			JSONObject bestEntity = (JSONObject) entry.get("bestEntity");
-			String kbIdentifier = bestEntity.getString("kbIdentifier");
+			String kbIdentifier = "";
+			JSONArray allEntities = entry.getJSONArray("allEntities");
+			if (allEntities.length() > 0) {
+				JSONObject bestEntity = (JSONObject) entry.get("bestEntity");
+				kbIdentifier = entityMetadata.getJSONObject(bestEntity.getString("kbIdentifier")).getString("url");
+			}
 
 			WDPSDisambiguatedEntity disEntity = new WDPSDisambiguatedEntity(offset, length, name, kbIdentifier);
 			outputList.add(disEntity);

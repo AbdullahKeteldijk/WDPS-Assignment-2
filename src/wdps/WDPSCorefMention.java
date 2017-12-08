@@ -6,8 +6,7 @@ public class WDPSCorefMention {
 	public int sentenceId;
 	public int startIndex;
 	public int endIndex;
-	public int corefChain;
-	
+	public int corefChain;	
 	
 	public WDPSCorefMention(int sentenceId, int startIndex, int endIndex, int corefChain) {
 		super();
@@ -40,6 +39,5 @@ public class WDPSCorefMention {
 	public void setCorefChain(int corefChain) {
 		this.corefChain = corefChain;
 	}
-	
-	
+		
 }

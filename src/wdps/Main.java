@@ -29,7 +29,7 @@ import edu.stanford.nlp.util.CoreMap;
 
 public class Main {
 
-	public static final StanfordCoreNLP pipeline = CoreNLPUtils.StanfordDepNNParser();
+	public StanfordCoreNLP pipeline;
 	// String text = "Michael Joseph Jackson [Michael Jackson][1][2] (August 29,
 	// 1958 – June 25, 2009) was an American [United States] singer, songwriter, and
 	// dancer. Dubbed the \"King of Pop\",[3][4] he was one of the most popular
@@ -38,6 +38,11 @@ public class Main {
 	// dance, and fashion[7][8][9] along with his publicized personal life made him
 	// a global figure in popular culture for over four decades.";
 	private static final Logger logger = LogManager.getLogger("Logger");
+	
+	public Main(StanfordCoreNLP pipeline) {
+		this.pipeline = pipeline;
+	}
+	
 
 	public ArrayList<WDPSToken> resolve(String text) {
 		ArrayList<WDPSToken> output = new ArrayList<WDPSToken>();

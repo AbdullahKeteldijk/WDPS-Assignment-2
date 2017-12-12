@@ -12,7 +12,10 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.stanford.nlp.pipeline.StanfordCoreNLP;
+
 public class inputReader {
+	public static final StanfordCoreNLP pipeline = CoreNLPUtils.StanfordDepNNParser();
 	public File[] readFiles(String inputdir, String ending) {
 		File dir = new File("/home/kevin/eclipse-workspace/Coref");
 		File[] files = dir.listFiles(new FilenameFilter() {
@@ -40,40 +43,111 @@ public class inputReader {
 			CSVEntry entry = new CSVEntry(csvEntries[0].trim(), csvEntries[1].toLowerCase().trim(), csvEntries[2].trim());
 			entries.add(entry);
 		}
-
-		String fileContent = readFile(txtFiles[0].getAbsolutePath());
-		Main c = new Main();
-		int correct = 0;
-		int wrong = 0;
-		int unfound = 0;
-		ArrayList<WDPSToken> tokens = c.resolve(fileContent);
-		int i = 0;
-		for (CSVEntry entry : entries) {
-			String csvWord = entry.getWord();
-			
-			for (int index = i; index < tokens.size(); index++) {
-				String tokenWord = tokens.get(index).getWord().toLowerCase();
-				if (tokenWord.equals(csvWord)) {
-					String url = entry.getKbId();
-					String url_tok = tokens.get(index).getKbIdentifier().toLowerCase();
-					url = url.replaceAll("_", "%20").toLowerCase();
-					url = url.replaceAll("https", "http");
-					url_tok = url_tok.replaceAll("https", "http");
-					if(url.equals(url_tok))
-						correct++;
-					if(url_tok.equals(""))
-						unfound++;
-					if(!url_tok.equals("") && !url_tok.equals(url))
-						wrong++;
-					System.out.println(csvWord +": "+url+ " ---- " + tokenWord+": "+url_tok);
-					i = index+1;
-					break;
+		String[] allFiles = new String[txtFiles.length];
+		for(int i=0;i<allFiles.length;i++) {
+			allFiles[i] = readFile(txtFiles[i].getAbsolutePath());
+		}
+		int overAllCorrect = 0;
+		int overAllWrong = 0;
+		int overAllUnfound = 0;
+		
+		for(int a=0; a<txtFiles.length;a++) {
+			String fileKey = txtFiles[a].getName().replaceAll(".txt", "");
+			System.out.println(fileKey);
+			if(fileKey.equals("Obama2"))
+				continue;
+			if(fileKey.equals("Da Vinci"))
+				continue;
+			if(fileKey.equals("Downey"))
+				continue;
+			if(fileKey.equals("Einstein"))
+				continue;
+			if(fileKey.equals("Muhammad Ali"))
+				continue;
+			if(fileKey.equals("Neymar"))
+				continue;
+			if(fileKey.equals("Xi Jinping"))
+				continue;
+			Main c = new Main(pipeline);
+			int correct = 0;
+			int wrong = 0;
+			int unfound = 0;
+			ArrayList<WDPSToken> tokens = c.resolve(allFiles[a]);
+			int i = 0;
+			for (CSVEntry entry : entries) {
+				String csvWord = entry.getWord();
+				String key = entry.getDocID();
+				if(!key.equals(fileKey))
+					continue;
+				
+				for (int index = i; index < tokens.size(); index++) {
+					String tokenWord = tokens.get(index).getWord().toLowerCase();
+					if (tokenWord.equals(csvWord)) {
+						String url = entry.getKbId();
+						String url_tok = tokens.get(index).getKbIdentifier().toLowerCase();
+						url = url.replaceAll("_", "%20").toLowerCase();
+						url = url.replaceAll("https", "http");
+						url_tok = url_tok.replaceAll("https", "http");
+						if(url.equals(url_tok))
+							correct++;
+						if(url_tok.equals(""))
+							unfound++;
+						if(!url_tok.equals("") && !url_tok.equals(url))
+							wrong++;
+						System.out.println(csvWord +": "+url+ " ---- " + tokenWord+": "+url_tok);
+						i = index+1;
+						break;
+					}
 				}
 			}
+			System.out.println("Correct: "+correct);
+			System.out.println("Wrong: "+wrong);
+			System.out.println("Not found: "+unfound);
+			System.out.println("********************");
+			overAllCorrect+=correct;
+			overAllWrong+=wrong;
+			overAllUnfound+=unfound;
 		}
-		System.out.println("Correct: "+correct);
-		System.out.println("Wrong: "+wrong);
-		System.out.println("Not found: "+unfound);
+		
+		System.out.println("All Correct: "+overAllCorrect);
+		System.out.println("All Wrong: "+overAllWrong);
+		System.out.println("All Not found: "+overAllUnfound);
+		System.out.println("********************");
+		
+		
+//		String fileContent = readFile(txtFiles[0].getAbsolutePath());
+//		Main c = new Main();
+//		int correct = 0;
+//		int wrong = 0;
+//		int unfound = 0;
+//		ArrayList<WDPSToken> tokens = c.resolve(fileContent);
+//		int i = 0;
+//		for (CSVEntry entry : entries) {
+//			String csvWord = entry.getWord();
+//			
+//			for (int index = i; index < tokens.size(); index++) {
+//				String tokenWord = tokens.get(index).getWord().toLowerCase();
+//				if (tokenWord.equals(csvWord)) {
+//					String url = entry.getKbId();
+//					String url_tok = tokens.get(index).getKbIdentifier().toLowerCase();
+//					url = url.replaceAll("_", "%20").toLowerCase();
+//					url = url.replaceAll("https", "http");
+//					url_tok = url_tok.replaceAll("https", "http");
+//					if(url.equals(url_tok))
+//						correct++;
+//					if(url_tok.equals(""))
+//						unfound++;
+//					if(!url_tok.equals("") && !url_tok.equals(url))
+//						wrong++;
+//					System.out.println(csvWord +": "+url+ " ---- " + tokenWord+": "+url_tok);
+//					i = index+1;
+//					break;
+//				}
+//			}
+//		}
+//		System.out.println("Correct: "+correct);
+//		System.out.println("Wrong: "+wrong);
+//		System.out.println("Not found: "+unfound);
 
 	}
 
